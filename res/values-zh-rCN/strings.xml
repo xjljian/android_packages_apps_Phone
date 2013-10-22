@@ -675,4 +675,80 @@
     <string name="vibrate_hangup">通话结束时震动</string>
     <string name="vibrate_45">45秒震动</string>
     <string name="vibrate_45_sum">呼出通话到达每分钟的45秒时震动</string>
+    <string name="in_call_end_button_string">  结 束</string>
+
+     <!-- Set Subscription screen: set subscription option name -->
+    <string name="set_subscription">选择SIM卡</string>
+    <!-- Set Subscription screen: label Card 1 -->
+    <string name="card_01">卡 1</string>
+    <!-- Set Subscription screen: label Card 2 -->
+    <string name="card_02">卡 2</string>
+
+    <!-- Set dual dialer for MultiSim -->
+    <string name="place_a_call1">卡 1</string>
+    <string name="place_a_call2">卡 2</string>
+    <string name="count_down">秒: </string>
+    <string name="call_number">To: </string>
+    <string name="cancel_call">取消</string>
+
+    <!-- Set Subscription screen: Message shown in error dialog -->
+    <string name="set_subscription_error_atleast_one">至少选择一张卡</string>
+    <!-- Set Subscription screen: label sub 1 -->
+    <string name="sub_1">卡 1</string>
+    <!-- Set Subscription screen: label sub 2 -->
+    <string name="sub_2">卡 2</string>
+    <!-- Set Subscription screen: Progress message -->
+    <string name="set_uicc_subscription_progress">正在设置SIM卡...</string>
+    <!-- Set Subscription screen: Set subscriptio success -->
+    <string name="set_sub_success">设置SIM卡成功</string>
+    <!-- Set Subscription screen: Set subscriptio success -->
+    <string name="set_sub_failed">设置SIM卡失败</string>
+    <!-- Set Subscription screen: Subscription 1 -->
+    <string name="set_sub_1">卡 1: </string>
+    <!-- Set Subscription screen: Subscription 2 -->
+    <string name="set_sub_2">卡 2: </string>
+    <!-- Set Subscription screen: Subscription activate success -->
+    <string name="set_sub_activate_success">激活成功</string>
+    <!-- Set Subscription screen: Subscription deactivate success -->
+    <string name="set_sub_deactivate_success">停用成功</string>
+    <!-- Set Subscription screen: Subscription activate failed -->
+    <string name="set_sub_activate_failed">激活失败</string>
+    <!-- Set Subscription screen: Subscription deactivate failed -->
+    <string name="set_sub_deactivate_failed">停用失败</string>
+    <!-- Set Subscription screen: Subscription activate not supported -->
+    <string name="set_sub_activate_not_supported">激活不支持</string>
+    <!-- Set Subscription screen: Subscription deactivate not supported -->
+    <string name="set_sub_deactivate_not_supported">停用不支持</string>
+    <!-- Set Subscription screen: No change in subscription -->
+    <string name="set_sub_no_change">SIM卡没有改变</string>
+    <!-- Set Subscription screen: New cards available -->
+    <string name="new_cards_available">SIM可用. 请配置SIM卡.</string>
+    <!-- Set Subscription screen: Configure subscription dialog title -->
+    <string name="config_sub_title">配置SIM卡</string>
+    <!-- Set Subscription screen: Deactivate both subscription not supported -->
+    <string name="deact_all_sub_not_supported">停用所有卡不支持.</string>
+
+    <!-- Sim contacts management -->
+    <string name="ContactScreen"> 添加/编辑SIM卡联系人</string>
+    <string name="ExportContactScreen"> 导出到SIM卡 </string>
+    <string name="addSimEntries"> 添加联系人到SIM卡</string>
+    <string name="deleteAllSimEntries"> 删除SIM卡全部联系人</string>
+    <string name="deleteSimContacts">删除SIM卡联系人</string>
+    <string name="editContact"> 编辑</string>
+    <string name="sendSms"> 发送短信</string>
+    <string name="delete"> 删除</string>
+    <string name="dial"> 拨号</string>
+    <string name="enterName"> 名称:</string>
+    <string name="enterNumber"> 输入电话号码:</string>
+    <string name="contactAddSuccess"> 添加SIM卡联系人成功 </string>
+    <string name="contactAddFailed"> 添加SIM卡联系人失败 !!!</string>
+    <string name="contactUpdateSuccess"> 更新SIM卡联系人成功 </string>
+    <string name="contactUpdateFailed"> 更新SIM卡联系人失败 !!!</string>
+    <string name="contactdeleteSuccess"> 删除SIM卡联系人成功 </string>
+    <string name="contactdeleteFailed"> 删除SIM卡联系人失败 !!!</string>
+    <string name="allContactdeleteSuccess"> 删除SIM卡全部联系人成功 </string>
+    <string name="allContactdeleteFailed"> 删除SIM卡全部联系人失败 !!!</string>
+    <string name="exportAllcontatsSuccess">导出成功 </string>
+    <string name="exportAllcontatsFailed"> 导出失败 !!!</string>
+    <string name="cursorError"> 无效数据 !!! </string>
 </resources>

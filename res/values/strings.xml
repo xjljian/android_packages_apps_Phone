@@ -366,17 +366,27 @@
     <string name="preferred_network_mode_cdma_only_summary">Preferred network mode: CDMA only</string>
     <!-- Mobile network settings, summary for preferred network mode EvDo only [CHAR LIMIT=100] -->
     <string name="preferred_network_mode_evdo_only_summary">Preferred network mode: EvDo only</string>
-    <!-- Mobile network settings, summary for preferred network mode LTE / CDMA[CHAR LIMIT=100] -->
-    <string name="preferred_network_mode_lte_cdma_summary">Preferred network mode: LTE / CDMA</string>
-    <!-- Mobile network settings, summary for preferred network mode LTE / GSM/WCDMA [CHAR LIMIT=100] -->
-    <string name="preferred_network_mode_lte_gsm_summary">Preferred network mode: LTE / GSM/WCDMA</string>
-    <!-- Mobile network settings, summary for preferred network mode LTE / CDMA / EvDo [CHAR LIMIT=100] -->
-    <string name="preferred_network_mode_lte_cdma_evdo_summary">Preferred network mode: LTE / CDMA / EvDo</string>
-    <!-- Mobile network settings, summary for preferred network mode LTE / CMDA / EvDo / GSM/WCDMA [CHAR LIMIT=100] -->
-    <string name="preferred_network_mode_lte_cdma_evdo_gsm_wcdma_summary">Preferred network mode: LTE / CMDA / EvDo / GSM/WCDMA</string>
+    <!-- Mobile network settings, summary for preferred network mode CDMA/EvDo/GSM/WCDMA[CHAR LIMIT=100] -->
+    <string name="preferred_network_mode_cdma_evdo_gsm_wcdma_summary">Preferred network mode: CDMA/EvDo/GSM/WCDMA</string>
+    <!-- Mobile network settings, summary for preferred network mode LTE [CHAR LIMIT=100] -->
+    <string name="preferred_network_mode_lte_summary">Preferred network mode: LTE </string>
+    <!-- Mobile network settings, summary for preferred network mode GSM/WCDMA/LTE [CHAR LIMIT=100] -->
+    <string name="preferred_network_mode_lte_gsm_wcdma_summary">Preferred network mode: GSM/WCDMA/LTE</string>
+    <!-- Mobile network settings, summary for preferred network mode CDMA+LTE/EVDO[CHAR LIMIT=100] -->
+    <string name="preferred_network_mode_lte_cdma_evdo_summary">Preferred network mode: CDMA+LTE/EVDO</string>
+    <!-- Mobile network settings, summary for preferred network mode Global[CHAR LIMIT=100] -->
+    <string name="preferred_network_mode_global_summary">Preferred network mode: Global</string>
+    <!-- Mobile network settings, summary for preferred network mode LTE / WCDMA[CHAR LIMIT=100] -->
+    <string name="preferred_network_mode_lte_wcdma_summary">Preferred network mode: LTE / WCDMA</string>
+
 
     <string-array name="preferred_network_mode_choices">
+        <item>LTE / WCDMA</item>
+        <item>LTE</item>
         <item>Global</item>
+        <item>GSM/WCDMA/LTE</item>
+        <item>CDMA + LTE/EvDo</item>
+        <item>CDMA/EvDo/GSM/WCDMA</item>
         <item>EvDo only</item>
         <item>CDMA w/o EvDo</item>
         <item>CDMA/EvDo auto</item>
@@ -386,6 +396,11 @@
         <item>GSM/WCDMA preferred</item>
     </string-array>
     <string-array name="preferred_network_mode_values"  translatable="false">
+        <item>"12"</item>
+        <item>"11"</item>
+        <item>"10"</item>
+        <item>"9"</item>
+        <item>"8"</item>
         <item>"7"</item>
         <item>"6"</item>
         <item>"5"</item>
@@ -443,6 +458,11 @@
     <string name="roaming_warning">Allow data roaming? You may incur significant roaming charges!</string>
     <string name="gsm_umts_options">GSM/UMTS Options</string>
     <string name="cdma_options">CDMA Options</string>
+    <string name="mobile_network_setting">Mobile Network Settings</string>
+    <string name="network_settings_sel_sub">Select Subscription</string>
+    <string name="network_manage_settings">Network Settings</string>
+    <string name="title_data_settings">Data Settings</string>
+    <string name="summary_manage_subscriptions">Manage Network settings of each subscriptions</string>
 
     <!-- Screen option on the mobile network settings to go into data usage settings -->
     <string name="throttle_data_usage">Data usage</string>
@@ -623,6 +643,27 @@
     <!-- Preference title for launching an account manager page for prepaid LTE [CHAR LIMIT=30] -->
     <string name="cdma_lte_data_service">Set up data service</string>
 
+    <!-- Call Independent services screen title-->
+    <string name="call_ind_services">Call Independent Services</string>
+    <!-- button name for launching sub1, sub2 screen for Multi Sim Functionality-->
+    <string name="callind_multi_sim">Select Subscription</string>
+    <!-- button name for direct launch of Call Feature screen for Single Sim Functionality -->
+    <string name="callind">Call Feature Settings</string>
+
+    <!-- dual sub one, setting option name -->
+    <string name="subone">Subscription 1</string>
+    <!-- dual mode settings screen, setting summary text -->
+    <string name="sub_one">Manage Subscription 1</string>
+    <!-- dual sub two, setting option name -->
+    <string name="subtwo">Subscription 2</string>
+    <!-- dual mode settings screen, setting summary text -->
+    <string name="sub_two">Manage Subscription 2</string>
+
+    <!-- dual prompt, setting option name -->
+    <string name="prompt">Prompt</string>
+    <!-- dual mode settings screen, setting summary text -->
+    <string name="prompt_user">Prompt User</string>
+
     <!-- FDN settings strings -->
     <!-- Call settings screen, setting option name -->
     <string name="fdn">Fixed Dialing Numbers</string>
@@ -645,6 +686,8 @@
     <string name="enable_fdn_ok">Disable FDN</string>
     <!-- Call settings screen, setting option name when FDN is disabled -->
     <string name="disable_fdn_ok">Enable FDN</string>
+    <!-- Call settings screen, toast when FDN service is unavailable-->
+    <string name="fdn_unavailable">FDN Service is not available</string>
     <!-- Call settings screen, setting summary text -->
     <string name="sum_fdn">Manage Fixed Dialing Numbers</string>
     <!-- Call settings, FDN screen, setting option name -->
@@ -703,14 +746,17 @@
          cause of the failure.
          [CHAR LIMIT=NONE] -->
     <string name="pin2_or_fdn_invalid">FDN wasn\'t updated. The PIN2 was incorrect, or the phone number was rejected.</string>
+    <!-- FDN settings: error message displayed in a popup (toast) -->
+    <string name="fdn_failed">FDN operation failed.</string>
 
     <!-- ADN related strings -->
     <!-- Placeholder text displayed while loading the list of SIM contacts -->
     <string name="simContacts_emptyLoading">Reading from SIM card\u2026</string>
+    <string name="exportContacts">Exporting contacts to SIM card\u2026</string>
     <!-- Call settings, string that appears on FDN contact list when there are no contacts on the SIM. -->
     <string name="simContacts_empty">No contacts on your SIM card.</string>
     <!-- Call settings: title of the dialog that lets you select contacts from the SIM. -->
-    <string name="simContacts_title">Select contacts to import</string>
+    <string name="simContacts_title">Manage SIM card contacts</string>
     <!-- Appears when user tries to import contacts in SIM during Airplane mode
       [CHAR LIMIT=NONE] -->
     <string name="simContacts_airplaneMode">To import contacts from the SIM card, first turn off Airplane mode.</string>
@@ -748,6 +794,8 @@
     <string name="pin_failed">The PIN you typed was incorrect.</string>
     <!-- SIM PIN screen: status message displayed in a popup (toast) -->
     <string name="pin_changed">SIM PIN changed successfully.</string>
+    <!-- SIM PIN screen: status message displayed in a popup (toast) -->
+    <string name="pin2_unblocked">PIN2 Unblocked!</string>
     <!-- SIM PIN screen: error message displayed in a dialog -->
     <string name="puk_requested">Password incorrect, SIM is locked! PUK2 requested.</string>
 
@@ -778,6 +826,10 @@
     <string name="fdn_enable_puk2_requested">Password incorrect. Change PIN2 and retry.</string>
     <!-- SIM PIN2 screen: error message displayed in a dialog -->
     <string name="puk2_requested">Password incorrect, SIM is locked. PUK2 requested.</string>
+    <!-- SIM PIN2 screen: error message -->
+    <string name="puk2_blocked">PUK2 is permanently blocked.</string>
+    <!-- SIM PIN2 screen: error message -->
+    <string name="pin2_attempts">\nAttempts Remaining :</string>
 
     <!-- SIM PIN screen: button label -->
     <string name="doneButton">Done</string>
@@ -1495,6 +1547,8 @@
     <string name="perm_change_mobile_network">Change network (2G/3G)</string>
     <string name="perm_change_mobile_network_desc">Application with this permission can, at any time, change between 2G data and 3G data. 3G is faster, consumes more battery, and can also cost you more money.</string>
 
+ 
+
     <!-- Noise suppression -->
     <string name="noise_suppression_title">Noise suppression</string>
     <string name="noise_suppression_summary">Enable noise suppression for calls</string>
@@ -1514,5 +1568,80 @@
     <string name="vibrate_hangup">Vibrate on hang up</string>
     <string name="vibrate_45">Vibrate every 45 seconds</string>
     <string name="vibrate_45_sum">Vibrates at the 45 second mark of every minute during outgoing calls</string>
+	<string name="in_call_end_button_string">finish</string>
 
+ <!-- Set Subscription screen: set subscription option name -->
+    <string name="set_subscription">Select subscriptions</string>
+    <!-- Set Subscription screen: label Card 1 -->
+    <string name="card_01">Card 1</string>
+    <!-- Set Subscription screen: label Card 2 -->
+    <string name="card_02">Card 2</string>
+
+    <!-- Set dual dialer for MultiSim -->
+    <string name="place_a_call1">Subscription 1</string>
+    <string name="place_a_call2">Subscription 2</string>
+    <string name="count_down">Seconds: </string>
+    <string name="call_number">To: </string>
+    <string name="cancel_call">Cancel</string>
+
+    <!-- Set Subscription screen: Message shown in error dialog -->
+    <string name="set_subscription_error_atleast_one">Select atleast one subscription</string>
+    <!-- Set Subscription screen: label sub 1 -->
+    <string name="sub_1">SUB 1</string>
+    <!-- Set Subscription screen: label sub 2 -->
+    <string name="sub_2">SUB 2</string>
+    <!-- Set Subscription screen: Progress message -->
+    <string name="set_uicc_subscription_progress">Set subscription in progress...</string>
+    <!-- Set Subscription screen: Set subscriptio success -->
+    <string name="set_sub_success">Set subscription success</string>
+    <!-- Set Subscription screen: Set subscriptio success -->
+    <string name="set_sub_failed">Set subscription failed</string>
+    <!-- Set Subscription screen: Subscription 1 -->
+    <string name="set_sub_1">Subscription 1: </string>
+    <!-- Set Subscription screen: Subscription 2 -->
+    <string name="set_sub_2">Subscription 2: </string>
+    <!-- Set Subscription screen: Subscription activate success -->
+    <string name="set_sub_activate_success">Activate success</string>
+    <!-- Set Subscription screen: Subscription deactivate success -->
+    <string name="set_sub_deactivate_success">Deactivate success</string>
+    <!-- Set Subscription screen: Subscription activate failed -->
+    <string name="set_sub_activate_failed">Activate failed</string>
+    <!-- Set Subscription screen: Subscription deactivate failed -->
+    <string name="set_sub_deactivate_failed">Deactivate failed</string>
+    <!-- Set Subscription screen: Subscription activate not supported -->
+    <string name="set_sub_activate_not_supported">Activate not supported</string>
+    <!-- Set Subscription screen: Subscription deactivate not supported -->
+    <string name="set_sub_deactivate_not_supported">Deactivate not supported</string>
+    <!-- Set Subscription screen: No change in subscription -->
+    <string name="set_sub_no_change">No change in Subscription</string>
+    <!-- Set Subscription screen: New cards available -->
+    <string name="new_cards_available">New card available. Please configure subscriptions.</string>
+    <!-- Set Subscription screen: Configure subscription dialog title -->
+    <string name="config_sub_title">Configure Subscriptions</string>
+    <!-- Set Subscription screen: Deactivate both subscription not supported -->
+    <string name="deact_all_sub_not_supported">Deactivation of both the subscriptions is not supported.</string>
+
+    <!-- Sim contacts management -->
+    <string name="ContactScreen"> Add/Edit SIM Contact</string>
+    <string name="ExportContactScreen"> Export phone contacts to sim </string>
+    <string name="addSimEntries"> Add SIM Contact</string>
+    <string name="deleteAllSimEntries"> Delete All SIM Contacts</string>
+    <string name="deleteSimContacts">Deleting SIM contacts</string>
+    <string name="editContact"> Edit</string>
+    <string name="sendSms"> Send SMS</string>
+    <string name="delete"> Delete</string>
+    <string name="dial"> Dial</string>
+    <string name="enterName"> Enter Name:</string>
+    <string name="enterNumber"> Enter Phone Number:</string>
+    <string name="contactAddSuccess"> Succesfully added contact to SIM </string>
+    <string name="contactAddFailed"> Failed to add contact to SIM !!!</string>
+    <string name="contactUpdateSuccess"> Succesfully updated contact in SIM </string>
+    <string name="contactUpdateFailed"> Failed to update contact in SIM !!!</string>
+    <string name="contactdeleteSuccess"> Succesfully deleted contact from SIM </string>
+    <string name="contactdeleteFailed"> Failed to delete contact from SIM !!!</string>
+    <string name="allContactdeleteSuccess"> Succesfully deleted all contacts from SIM </string>
+    <string name="allContactdeleteFailed"> Failed to delete all contacts from SIM !!!</string>
+    <string name="exportAllcontatsSuccess">Succesfully exported all contacts to SIM </string>
+    <string name="exportAllcontatsFailed"> Failed to export all contacts to SIM !!!</string>
+    <string name="cursorError"> Cursor is not having proper data !!! </string>
 </resources>

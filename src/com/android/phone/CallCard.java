@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2006 The Android Open Source Project
+ * Copyright (c) 2012, Code Aurora Forum. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +41,7 @@ import android.view.accessibility.AccessibilityEvent;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.telephony.PhoneNumberUtils;
 
 import com.android.internal.telephony.Call;
 import com.android.internal.telephony.CallManager;
@@ -94,7 +96,7 @@ public class CallCard extends LinearLayout
     /** Container for info about the current call(s) */
     private ViewGroup mCallInfoContainer;
     /** Primary "call info" block (the foreground or ringing call) */
-    private ViewGroup mPrimaryCallInfo;
+    protected ViewGroup mPrimaryCallInfo;
     /** "Call banner" for the primary call */
     private ViewGroup mPrimaryCallBanner;
     /** Secondary "call info" block (the background "on hold" call) */
@@ -143,7 +145,7 @@ public class CallCard extends LinearLayout
     private int mIncomingCallWidgetHintTextResId;
     private int mIncomingCallWidgetHintColorResId;
 
-    private CallTime mCallTime;
+    protected CallTime mCallTime;
 
     // Track the state for the photo.
     private ContactsAsyncHelper.ImageTracker mPhotoTracker;
@@ -595,6 +597,20 @@ public class CallCard extends LinearLayout
                     if (DBG) log("- displayMainCallStatus: using data we already have...");
                     if (o instanceof CallerInfo) {
                         CallerInfo ci = (CallerInfo) o;
+                        // In case of emergency and voice mail numbers, ci.phoneNumber is
+                        // updated with "Emergency Number" text and voice mail tag respectively.
+                        // So, ci.phoneNumber will not match connection address.
+                        String connAddress = conn.getAddress();
+                        String number = PhoneNumberUtils.stripSeparators(ci.phoneNumber);
+                        if (!(ci.isEmergencyNumber() || ci.isVoiceMailNumber()) &&
+                            (!connAddress.equals(number))) {
+                            log("- displayMainCallStatus: Phone number modified!!");
+                            CallerInfo newCi = CallerInfo.getCallerInfo(getContext(), connAddress);
+                            if (newCi != null) {
+                                ci = newCi;
+                                conn.setUserData(ci);
+                            }
+                        }
                         // Update CNAP information if Phone state change occurred
                         ci.cnapName = conn.getCnapName();
                         ci.numberPresentation = conn.getNumberPresentation();
@@ -642,6 +658,11 @@ public class CallCard extends LinearLayout
         // mPhoneNumber and mLabel. (Their text / color / visibility have
         // already been set correctly, by either updateDisplayForPerson()
         // or updateDisplayForConference().)
+    }
+
+    protected void cancelTimer(Call call) {
+        //parameter "call" is ignored.
+        mCallTime.cancelTimer();
     }
 
     /**
@@ -705,7 +726,7 @@ public class CallCard extends LinearLayout
             //
             // TODO: may be nice to update the image view again once the newer one
             // is available on contacts database.
-            PhoneUtils.sendViewNotificationAsync(mApplication, mLoadingPersonUri);
+            PhoneUtils.sendViewNotificationAsync(mApplication.mContext, mLoadingPersonUri);
         } else {
             // This should not happen while we need some verbose info if it happens..
             Log.w(LOG_TAG, "Person Uri isn't available while Image is successfully loaded.");
@@ -945,6 +966,8 @@ public class CallCard extends LinearLayout
             return;
         }
 
+        Phone phone = call.getPhone();
+        boolean showSecondaryCallInfo = false;
         Call.State state = call.getState();
         switch (state) {
             case HOLDING:
@@ -991,7 +1014,7 @@ public class CallCard extends LinearLayout
                 // CDMA: This is because in CDMA when the user originates the second call,
                 // although the Foreground call state is still ACTIVE in reality the network
                 // put the first call on hold.
-                if (mApplication.phone.getPhoneType() == Phone.PHONE_TYPE_CDMA) {
+                if (phone.getPhoneType() == Phone.PHONE_TYPE_CDMA) {
                     showSecondaryCallInfo();
 
                     List<Connection> connections = call.getConnections();

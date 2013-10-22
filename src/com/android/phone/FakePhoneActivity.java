@@ -19,7 +19,7 @@ package com.android.phone;
 import android.app.Activity;
 import android.app.NotificationManager;
 import android.os.Bundle;
-import com.android.internal.telephony.test.SimulatedRadioControl;
+//import com.android.internal.telephony.test.SimulatedRadioControl;
 import android.util.Log;
 import android.view.View.OnClickListener;
 import android.view.View;
@@ -35,7 +35,7 @@ public class FakePhoneActivity extends Activity {
 
     private Button mPlaceCall;
     private EditText mPhoneNumber;
-    SimulatedRadioControl mRadioControl;
+    //SimulatedRadioControl mRadioControl;
 
     @Override
     public void onCreate(Bundle icicle) {
@@ -54,16 +54,16 @@ public class FakePhoneActivity extends Activity {
                     }
                 });
 
-        mRadioControl = PhoneApp.getPhone().getSimulatedRadioControl();
+        //mRadioControl = PhoneApp.getPhone().getSimulatedRadioControl();
 
         Log.i(TAG, "- PhoneApp.getInstance(): " + PhoneApp.getInstance());
         Log.i(TAG, "- PhoneApp.getPhone(): " + PhoneApp.getPhone());
-        Log.i(TAG, "- mRadioControl: " + mRadioControl);
+       // Log.i(TAG, "- mRadioControl: " + mRadioControl);
     }
 
     private class ButtonListener implements OnClickListener {
         public void onClick(View v) {
-            if (mRadioControl == null) {
+           /* if (mRadioControl == null) {
                 Log.e("Phone", "SimulatedRadioControl not available, abort!");
                 NotificationManager nm =
                         (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
@@ -72,7 +72,7 @@ public class FakePhoneActivity extends Activity {
                 return;
             }
             
-            mRadioControl.triggerRing(mPhoneNumber.getText().toString());
+            mRadioControl.triggerRing(mPhoneNumber.getText().toString());*/
         }
     }
 }

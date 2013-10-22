@@ -34,6 +34,8 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
+import static com.android.internal.telephony.MSimConstants.SUBSCRIPTION_KEY;
+
 /**
  * Phone app module in charge of "call control".
  *
@@ -203,7 +205,7 @@ public class CallController extends Handler {
         }
 
         String scheme = uri.getScheme();
-        String number = PhoneNumberUtils.getNumberFromIntent(intent, mApp);
+        String number = PhoneNumberUtils.getNumberFromIntent(intent, mApp.mContext);
         if (VDBG) {
             log("- action: " + action);
             log("- uri: " + uri);
@@ -305,9 +307,6 @@ public class CallController extends Handler {
         //   and if so simply call updateInCallScreen() instead.
 
         mApp.displayCallScreen();
-
-        // enable noise suppression
-        PhoneUtils.turnOnNoiseSuppression(mApp.getApplicationContext(), true);
     }
 
     /**
@@ -359,18 +358,13 @@ public class CallController extends Handler {
             // or any of combinations
             String sipPhoneUri = intent.getStringExtra(
                     OutgoingCallBroadcaster.EXTRA_SIP_PHONE_URI);
-            phone = PhoneUtils.pickPhoneBasedOnNumber(mCM, scheme, number, sipPhoneUri);
+            int sub = intent.getIntExtra(SUBSCRIPTION_KEY, mApp.getVoiceSubscription());
+            phone = PhoneUtils.pickPhoneBasedOnNumber(mCM, scheme, number, sipPhoneUri, sub);
             if (VDBG) log("- got Phone instance: " + phone + ", class = " + phone.getClass());
 
             // update okToCallStatus based on new phone
-            if (phone.getServiceState() != null) {
-                okToCallStatus = checkIfOkToInitiateOutgoingCall(
-                        phone.getServiceState().getState());
-            }
-            else {
-                log(">>>> phone.getServiceState == NULL, setting CallStatusCode.OUT_OF_SERVICE");
-                return CallStatusCode.OUT_OF_SERVICE;
-            }
+            okToCallStatus = checkIfOkToInitiateOutgoingCall(
+                    phone.getServiceState().getState());
 
         } catch (PhoneUtils.VoiceMailNumberMissingException ex) {
             // If the call status is NOT in an acceptable state, it
@@ -396,9 +390,9 @@ public class CallController extends Handler {
         // (This is just a sanity-check; this policy *should* really be
         // enforced in OutgoingCallBroadcaster.onCreate(), which is the
         // main entry point for the CALL and CALL_* intents.)
-        boolean isEmergencyNumber = PhoneNumberUtils.isLocalEmergencyNumber(number, mApp);
+        boolean isEmergencyNumber = PhoneNumberUtils.isLocalEmergencyNumber(number, mApp.mContext);
         boolean isPotentialEmergencyNumber =
-                PhoneNumberUtils.isPotentialLocalEmergencyNumber(number, mApp);
+                PhoneNumberUtils.isPotentialLocalEmergencyNumber(number, mApp.mContext);
         boolean isEmergencyIntent = Intent.ACTION_CALL_EMERGENCY.equals(intent.getAction());
 
         if (isPotentialEmergencyNumber && !isEmergencyIntent) {
@@ -476,7 +470,7 @@ public class CallController extends Handler {
 
         // Watch out: PhoneUtils.placeCall() returns one of the
         // CALL_STATUS_* constants, not a CallStatusCode enum value.
-        int callStatus = PhoneUtils.placeCall(mApp,
+        int callStatus = PhoneUtils.placeCall(mApp.mContext,
                                               phone,
                                               number,
                                               contactUri,
@@ -512,12 +506,6 @@ public class CallController extends Handler {
                 // in-call UI while the new call is dialing, and when it
                 // first gets connected.)
                 inCallUiState.showDialpad = voicemailUriSpecified;
-
-                // For voicemails, we add context text to let the user know they
-                // are dialing their voicemail.
-                // TODO: This is only set here and becomes problematic when swapping calls
-                inCallUiState.dialpadContextText = voicemailUriSpecified ?
-                    phone.getVoiceMailAlphaTag() : "";
 
                 // Also, in case a previous call was already active (i.e. if
                 // we just did "Add call"), clear out the "history" of DTMF
@@ -729,8 +717,8 @@ public class CallController extends Handler {
                 // be cleaner to just set a pending call status code here,
                 // and then let the InCallScreen display the toast...
                 if (mCM.getState() == Phone.State.OFFHOOK) {
-                    Toast.makeText(mApp, R.string.incall_status_dialed_mmi, Toast.LENGTH_SHORT)
-                            .show();
+                    Toast.makeText(mApp.mContext,
+                            R.string.incall_status_dialed_mmi, Toast.LENGTH_SHORT).show();
                 }
                 break;
 

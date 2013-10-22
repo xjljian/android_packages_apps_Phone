@@ -1,5 +1,9 @@
 /*
  * Copyright (C) 2006 The Android Open Source Project
+ * Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+ *
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +31,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.telephony.NeighboringCellInfo;
 import android.telephony.CellInfo;
@@ -40,6 +45,10 @@ import com.android.internal.telephony.IccCard;
 import com.android.internal.telephony.ITelephony;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.CallManager;
+import com.android.internal.telephony.TelephonyIntents;
+import com.android.internal.telephony.CommandException;
+import com.android.internal.telephony.IOemHookCallback;
+import com.android.internal.telephony.QosSpec;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -58,7 +67,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     private static final int CMD_ANSWER_RINGING_CALL = 4;
     private static final int CMD_END_CALL = 5;  // not used yet
     private static final int CMD_SILENCE_RINGER = 6;
-    private static final int CMD_TOGGLE_LTE = 7; // not used yet
+    private static final int CMD_INVOKE_OEM_RIL_REQUEST = 7;
+    private static final int EVENT_INVOKE_OEM_RIL_REQUEST = 8;
+    private static final int EVENT_UNSOL_OEM_HOOK_EXT_APP = 9;
+    private static final int CMD_INVOKE_OEM_RIL_REQUEST_ASYNC = 12;
+    private static final int EVENT_INVOKE_OEM_RIL_REQUEST_ASYNC_DONE = 13;
 
     /** The singleton instance. */
     private static PhoneInterfaceManager sInstance;
@@ -84,6 +97,24 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
 
     /**
+     * A request object for use with {@link MainThreadHandler}. The main thread
+     * will notify the request when it is complete.
+     */
+    private static final class MainThreadRequestAsync {
+        /** The first argument to use for the request */
+        public Object arg1;
+        /** The second argument to use for the callback */
+        public Object arg2;
+        /** The result of the request that is run on the main thread */
+        public Object result;
+
+        public MainThreadRequestAsync(Object arg1, Object arg2) {
+            this.arg1 = arg1;
+            this.arg2 = arg2;
+        }
+    }
+
+    /**
      * A handler that processes messages on the main thread in the phone process. Since many
      * of the Phone calls are not thread safe this is needed to shuttle the requests from the
      * inbound binder threads to the main thread in the phone process.  The Binder thread
@@ -95,10 +126,11 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      * note that request.result must be set to something non-null for the calling thread to
      * unblock.
      */
-    private final class MainThreadHandler extends Handler {
+    protected class MainThreadHandler extends Handler {
         @Override
         public void handleMessage(Message msg) {
             MainThreadRequest request;
+            MainThreadRequestAsync requestAsync;
             Message onCompleted;
             AsyncResult ar;
 
@@ -165,6 +197,47 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                     }
                     break;
 
+                case CMD_INVOKE_OEM_RIL_REQUEST:
+                    request = (MainThreadRequest)msg.obj;
+                    onCompleted = obtainMessage(EVENT_INVOKE_OEM_RIL_REQUEST, request);
+                    mPhone.invokeOemRilRequestRaw((byte[])request.argument, onCompleted);
+                    break;
+
+                case EVENT_INVOKE_OEM_RIL_REQUEST:
+                    ar = (AsyncResult)msg.obj;
+                    request = (MainThreadRequest)ar.userObj;
+                    request.result = ar;
+                    // Wake up the requesting thread
+                    synchronized (request) {
+                        request.notifyAll();
+                    }
+                    break;
+
+                case CMD_INVOKE_OEM_RIL_REQUEST_ASYNC:
+                    requestAsync = (MainThreadRequestAsync) msg.obj;
+                    onCompleted = obtainMessage(
+                            EVENT_INVOKE_OEM_RIL_REQUEST_ASYNC_DONE, requestAsync);
+                    mPhone.invokeOemRilRequestRaw((byte[]) requestAsync.arg1,
+                            onCompleted);
+                    break;
+
+                case EVENT_INVOKE_OEM_RIL_REQUEST_ASYNC_DONE:
+                    ar = (AsyncResult) msg.obj;
+                    requestAsync = (MainThreadRequestAsync) ar.userObj;
+                    requestAsync.result = ar.result;
+                    IOemHookCallback cb = (IOemHookCallback) requestAsync.arg2;
+                    try {
+                        cb.onOemHookResponse((byte[]) (requestAsync.result));
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+
+                case EVENT_UNSOL_OEM_HOOK_EXT_APP:
+                    ar = (AsyncResult)msg.obj;
+                    broadcastUnsolOemHookIntent((byte[])(ar.result));
+                    break;
+
                 default:
                     Log.w(LOG_TAG, "MainThreadHandler: unexpected message code: " + msg.what);
                     break;
@@ -199,6 +272,13 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         return request.result;
     }
 
+    public void broadcastUnsolOemHookIntent(byte[] payload) {
+        Intent intent = new Intent(TelephonyIntents.ACTION_UNSOL_RESPONSE_OEM_HOOK_RAW);
+        intent.putExtra("payload", payload);
+        Log.d(LOG_TAG,"Broadcasting intent ACTION_UNSOL_RESPONSE_OEM_HOOK_RAW");
+        mApp.mContext.sendBroadcast(intent);
+    }
+
     /**
      * Asynchronous ("fire and forget") version of sendRequest():
      * Posts the specified command to be executed on the main thread, and
@@ -207,6 +287,18 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      */
     private void sendRequestAsync(int command) {
         mMainThreadHandler.sendEmptyMessage(command);
+    }
+
+    /**
+     * Posts the specified command to be executed on the main thread, and
+     * returns the result without waiting for the request to complete,
+     *
+     * @see sendRequestAsync
+     */
+    private void sendRequestAsync(int command, Object arg1, Object arg2) {
+        MainThreadRequestAsync request = new MainThreadRequestAsync(arg1, arg2);
+        Message msg = mMainThreadHandler.obtainMessage(command, request);
+        msg.sendToTarget();
     }
 
     /**
@@ -230,6 +322,8 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         mPhone = phone;
         mCM = PhoneApp.getInstance().mCM;
         mMainThreadHandler = new MainThreadHandler();
+        Log.d(LOG_TAG, " Registering for UNSOL OEM HOOK Responses to deliver external apps");
+        mPhone.setOnUnsolOemHookExtApp(mMainThreadHandler, EVENT_UNSOL_OEM_HOOK_EXT_APP, null);
         publish();
     }
 
@@ -259,7 +353,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         if (state != Phone.State.OFFHOOK && state != Phone.State.RINGING) {
             Intent  intent = new Intent(Intent.ACTION_DIAL, Uri.parse(url));
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            mApp.startActivity(intent);
+            mApp.mContext.startActivity(intent);
         }
     }
 
@@ -278,28 +372,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
 
         Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse(url));
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        mApp.startActivity(intent);
-    }
-
-    public void toggleLTE(boolean on) {
-        int network = -1;
-        if (getLteOnCdmaMode() == Phone.LTE_ON_CDMA_TRUE) {
-            if (on) {
-                network = Phone.NT_MODE_GLOBAL;
-            } else {
-                network = Phone.NT_MODE_CDMA;
-            }
-        } else if (getLteOnGsmMode() != 0) {
-            if (on) {
-                network = Phone.NT_MODE_LTE_GSM_WCDMA;
-            } else {
-                network = Phone.NT_MODE_WCDMA_PREF;
-            }
-        }
-        mPhone.setPreferredNetworkType(network,
-                mMainThreadHandler.obtainMessage(CMD_TOGGLE_LTE));
-        android.provider.Settings.Secure.putInt(mApp.getContentResolver(),
-                android.provider.Settings.Secure.PREFERRED_NETWORK_MODE, network);
+        mApp.mContext.startActivity(intent);
     }
 
     private boolean showCallScreenInternal(boolean specifyInitialDialpadState,
@@ -321,7 +394,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                 intent = PhoneApp.createInCallIntent();
             }
             try {
-                mApp.startActivity(intent);
+                mApp.mContext.startActivity(intent);
             } catch (ActivityNotFoundException e) {
                 // It's possible that the in-call UI might not exist
                 // (like on non-voice-capable devices), although we
@@ -445,6 +518,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
 
     public boolean supplyPin(String pin) {
+        return (supplyPinReportResult(pin) == Phone.PIN_RESULT_SUCCESS) ? true : false;
+    }
+
+    public int supplyPinReportResult(String pin) {
         enforceModifyPermission();
         final UnlockSim checkSimPin = new UnlockSim(mPhone.getIccCard());
         checkSimPin.start();
@@ -452,6 +529,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
 
     public boolean supplyPuk(String puk, String pin) {
+        return (supplyPukReportResult(puk, pin) == Phone.PIN_RESULT_SUCCESS) ? true : false;
+    }
+
+    public int supplyPukReportResult(String puk, String pin) {
         enforceModifyPermission();
         final UnlockSim checkSimPuk = new UnlockSim(mPhone.getIccCard());
         checkSimPuk.start();
@@ -467,7 +548,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         private final IccCard mSimCard;
 
         private boolean mDone = false;
-        private boolean mResult = false;
+        private int mResult = Phone.PIN_RESULT_SUCCESS;
 
         // For replies from SimCard interface
         private Handler mHandler;
@@ -491,7 +572,17 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
                             case SUPPLY_PIN_COMPLETE:
                                 Log.d(LOG_TAG, "SUPPLY_PIN_COMPLETE");
                                 synchronized (UnlockSim.this) {
-                                    mResult = (ar.exception == null);
+                                    if (ar.exception != null) {
+                                        if (ar.exception instanceof CommandException &&
+                                                ((CommandException)(ar.exception)).getCommandError()
+                                                == CommandException.Error.PASSWORD_INCORRECT) {
+                                            mResult = Phone.PIN_PASSWORD_INCORRECT;
+                                        } else {
+                                            mResult = Phone.PIN_GENERAL_FAILURE;
+                                        }
+                                    } else {
+                                        mResult = Phone.PIN_RESULT_SUCCESS;
+                                    }
                                     mDone = true;
                                     UnlockSim.this.notifyAll();
                                 }
@@ -511,7 +602,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
          *
          * If PUK is not null, unlock SIM card with PUK and set PIN code
          */
-        synchronized boolean unlockSim(String puk, String pin) {
+        synchronized int unlockSim(String puk, String pin) {
 
             while (mHandler == null) {
                 try {
@@ -568,7 +659,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     public boolean enableDataConnectivity() {
         enforceModifyPermission();
         ConnectivityManager cm =
-                (ConnectivityManager)mApp.getSystemService(Context.CONNECTIVITY_SERVICE);
+                (ConnectivityManager)mApp.mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
         cm.setMobileDataEnabled(true);
         return true;
     }
@@ -583,10 +674,34 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         return mPhone.disableApnType(type);
     }
 
+    public int enableQos(QosSpec qosSpec, String type) {
+        return mPhone.enableQos(qosSpec, type);
+    }
+
+    public int disableQos(int qosId) {
+        return mPhone.disableQos(qosId);
+    }
+
+    public int modifyQos(int qosId, QosSpec qosSpec) {
+        return mPhone.modifyQos(qosId, qosSpec);
+    }
+
+    public int suspendQos(int qosId) {
+        return mPhone.suspendQos(qosId);
+    }
+
+    public int resumeQos(int qosId) {
+        return mPhone.resumeQos(qosId);
+    }
+
+    public int getQosStatus(int qosId) {
+        return mPhone.getQosStatus(qosId);
+    }
+
     public boolean disableDataConnectivity() {
         enforceModifyPermission();
         ConnectivityManager cm =
-                (ConnectivityManager)mApp.getSystemService(Context.CONNECTIVITY_SERVICE);
+                (ConnectivityManager)mApp.mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
         cm.setMobileDataEnabled(false);
         return true;
     }
@@ -619,13 +734,13 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
 
     public Bundle getCellLocation() {
         try {
-            mApp.enforceCallingOrSelfPermission(
+            mApp.mContext.enforceCallingOrSelfPermission(
                 android.Manifest.permission.ACCESS_FINE_LOCATION, null);
         } catch (SecurityException e) {
             // If we have ACCESS_FINE_LOCATION permission, skip the check for ACCESS_COARSE_LOCATION
             // A failure should throw the SecurityException from ACCESS_COARSE_LOCATION since this
             // is the weaker precondition
-            mApp.enforceCallingOrSelfPermission(
+            mApp.mContext.enforceCallingOrSelfPermission(
                 android.Manifest.permission.ACCESS_COARSE_LOCATION, null);
         }
         Bundle data = new Bundle();
@@ -634,13 +749,13 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     }
 
     public void enableLocationUpdates() {
-        mApp.enforceCallingOrSelfPermission(
+        mApp.mContext.enforceCallingOrSelfPermission(
                 android.Manifest.permission.CONTROL_LOCATION_UPDATES, null);
         mPhone.enableLocationUpdates();
     }
 
     public void disableLocationUpdates() {
-        mApp.enforceCallingOrSelfPermission(
+        mApp.mContext.enforceCallingOrSelfPermission(
                 android.Manifest.permission.CONTROL_LOCATION_UPDATES, null);
         mPhone.disableLocationUpdates();
     }
@@ -648,14 +763,14 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
     @SuppressWarnings("unchecked")
     public List<NeighboringCellInfo> getNeighboringCellInfo() {
         try {
-            mApp.enforceCallingOrSelfPermission(
+            mApp.mContext.enforceCallingOrSelfPermission(
                     android.Manifest.permission.ACCESS_FINE_LOCATION, null);
         } catch (SecurityException e) {
             // If we have ACCESS_FINE_LOCATION permission, skip the check
             // for ACCESS_COARSE_LOCATION
             // A failure should throw the SecurityException from
             // ACCESS_COARSE_LOCATION since this is the weaker precondition
-            mApp.enforceCallingOrSelfPermission(
+            mApp.mContext.enforceCallingOrSelfPermission(
                     android.Manifest.permission.ACCESS_COARSE_LOCATION, null);
         }
 
@@ -671,6 +786,10 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         return (List <NeighboringCellInfo>) cells;
     }
 
+    // Gets the retry count during PIN1/PUK1 verification.
+    public int getIccPin1RetryCount() {
+        return mPhone.getIccCard().getIccPin1RetryCount();
+    }
 
     public List<CellInfo> getAllCellInfo() {
         try {
@@ -707,7 +826,8 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      * @throws SecurityException if the caller does not have the required permission
      */
     private void enforceModifyPermission() {
-        mApp.enforceCallingOrSelfPermission(android.Manifest.permission.MODIFY_PHONE_STATE, null);
+        mApp.mContext.enforceCallingOrSelfPermission(
+                android.Manifest.permission.MODIFY_PHONE_STATE, null);
     }
 
     /**
@@ -716,7 +836,7 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
      * @throws SecurityException if the caller does not have the required permission
      */
     private void enforceCallPermission() {
-        mApp.enforceCallingOrSelfPermission(android.Manifest.permission.CALL_PHONE, null);
+        mApp.mContext.enforceCallingOrSelfPermission(android.Manifest.permission.CALL_PHONE, null);
     }
 
 
@@ -736,6 +856,50 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
 
     public int getActivePhoneType() {
         return mPhone.getPhoneType();
+    }
+
+    public int sendOemRilRequestRaw(byte[] request, byte[] response) {
+        int returnValue = 0;
+        // TODO: Check Permissions of the application
+
+        try {
+            AsyncResult result = (AsyncResult)sendRequest(CMD_INVOKE_OEM_RIL_REQUEST, request);
+            if(result.exception == null) {
+                returnValue = 0;
+                if (result.result != null) {
+                    byte[] responseData = (byte[])(result.result);
+                    if(responseData.length > response.length) {
+                        Log.w(LOG_TAG, "Buffer to copy response too small: Response length is " +
+                                responseData.length +  "bytes. Buffer Size is " +
+                                response.length + "bytes.");
+                    }
+                    System.arraycopy(responseData, 0, response, 0, responseData.length);
+                    returnValue = responseData.length;
+                }
+
+            } else {
+                CommandException ex = (CommandException) result.exception;
+                returnValue = ex.getCommandError().ordinal();
+                if(returnValue > 0) returnValue *= -1;
+            }
+        } catch (RuntimeException e) {
+            Log.w(LOG_TAG, "sendOemRilRequestRaw: Runtime Exception");
+            returnValue = (CommandException.Error.GENERIC_FAILURE.ordinal());
+            if(returnValue > 0) returnValue *= -1;
+        }
+
+        return returnValue;
+    }
+
+    public void sendOemRilRequestRawAsync(byte[] request,
+            IOemHookCallback oemHookCb) {
+        try {
+            sendRequestAsync(CMD_INVOKE_OEM_RIL_REQUEST_ASYNC, request,
+                    oemHookCb);
+        } catch (RuntimeException e) {
+            Log.w(LOG_TAG, "sendOemRilRequestRawAsync: Runtime Exception");
+        }
+
     }
 
     /**
@@ -801,7 +965,28 @@ public class PhoneInterfaceManager extends ITelephony.Stub {
         return mPhone.getLteOnCdmaMode();
     }
 
-    public int getLteOnGsmMode() {
-        return mPhone.getLteOnGsmMode();
+    /**
+     * {@hide}
+     * Modify data readiness checks performed during data call setup
+     *
+     * @param checkConnectivity - check for network state in service, roaming and data in roaming enabled.
+     * @param checkSubscription - check for icc/nv ready and icc records loaded.
+     * @param tryDataCalls - set to true to attempt data calls if data call is not already active.
+     *
+     */
+    public void setDataReadinessChecks(boolean checkConnectivity, boolean checkSubscription,
+            boolean tryDataCalls) {
+        enforceModifyPermission();
+        mPhone.setDataReadinessChecks(checkConnectivity, checkSubscription, tryDataCalls);
+    }
+
+    public void setPhone(Phone phone) {
+        if (mPhone != null) {
+            Log.d(LOG_TAG, "un=register for UNSOL OEM HOOK");
+            mPhone.unSetOnUnsolOemHookExtApp(mMainThreadHandler);
+        }
+        mPhone = phone;
+        Log.d(LOG_TAG, " Registering for UNSOL OEM HOOK Responses to deliver external apps");
+        mPhone.setOnUnsolOemHookExtApp(mMainThreadHandler, EVENT_UNSOL_OEM_HOOK_EXT_APP, null);
     }
 }
